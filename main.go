@@ -165,15 +165,22 @@ func (m *HDXMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func main() {
 	log.Print("Starting HDX API Server...")
 
-	// Connect to MySQL
-	log.Print("Connecting to MySQL server...")
 	var err error
+
+	// Get MySQL database handler
 	shared.DB, err = sql.Open("mysql", SQL_DSN)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	defer shared.DB.Close()
+
+	// Validate DSN data by connecting to the MySQL server
+	log.Print("Connecting to MySQL server...")
+	err = shared.DB.Ping()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Initialize web server
 	log.Print("Initializing web server...")
