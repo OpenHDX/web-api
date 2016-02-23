@@ -141,12 +141,12 @@ func (m *HDXMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Pass business info to current connection data
 		currentConn.BusinessInfo = shared.BusinessData[currentConn.Domain]
 
-		switch strings.ToUpper(r.Method) {
-		case "GET":
+		switch r.Method {
+		case http.MethodGet:
 			modules.Get(page, w, &output, r, &currentConn)
-		case "POST":
+		case http.MethodPost:
 			modules.Post(page, w, &output, r, &currentConn)
-		case "DELETE":
+		case http.MethodDelete:
 			modules.Delete(page, w, &output, r, &currentConn)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
