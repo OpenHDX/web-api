@@ -7,15 +7,15 @@ import (
 	"net/http"
 )
 
-type Module interface {
+type ModuleRequester interface {
 	Get(http.ResponseWriter, *bytes.Buffer, *http.Request, *shared.ConnInfo)
 	Post(http.ResponseWriter, *bytes.Buffer, *http.Request, *shared.ConnInfo)
 	Delete(http.ResponseWriter, *bytes.Buffer, *http.Request, *shared.ConnInfo)
 }
 
-var modules map[string]Module
+var modules map[string]ModuleRequester
 
-func Add(name string, module Module) {
+func Add(name string, module ModuleRequester) {
 	modules[name] = module
 }
 
@@ -47,5 +47,5 @@ func Delete(module string, w http.ResponseWriter, o *bytes.Buffer, r *http.Reque
 }
 
 func init() {
-	modules = make(map[string]Module)
+	modules = make(map[string]ModuleRequester)
 }
