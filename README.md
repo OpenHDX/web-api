@@ -1,4 +1,4 @@
-# HDX Web API server
+# HDX Web API server [![Build Status](https://travis-ci.org/OpenHDX/web-api.svg?branch=master)](https://travis-ci.org/OpenHDX/web-api)
 This is the HDX Web API server in Go.
 
 ## Quick Start Install
