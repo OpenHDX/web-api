@@ -1,6 +1,10 @@
 package shared
 
-import "database/sql"
+import (
+	"bytes"
+	"database/sql"
+	"net/http"
+)
 
 const (
 	// Random data for fingerprint and verification code
@@ -39,18 +43,25 @@ type UserInfo struct {
 	Exp      int64  `json:"exp"`
 }
 
+type Response struct {
+	StatusCode int
+	Header     map[string]string
+	Body       bytes.Buffer
+}
+
 // Connection info store
 type ConnInfo struct {
 	Domain       string
+	Request      *http.Request
 	RequestTime  int64
 	Fingerprint  string
 	BusinessInfo *BusinessInfo
 	UserInfo     *UserInfo
+	Response
 }
 
 type ErrorMessage struct {
-	StatusCode int    `json:"-"`
-	Message    string `json:"error"`
-	Delay      int64  `json:"delay,omitempty"`
-	Verifier   string `json:"verifier,omitempty"`
+	Message  string `json:"error"`
+	Delay    int64  `json:"delay,omitempty"`
+	Verifier string `json:"verifier,omitempty"`
 }

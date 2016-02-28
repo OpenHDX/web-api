@@ -1,7 +1,6 @@
 package sessions
 
 import (
-	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -24,17 +23,17 @@ type AuthMsg struct {
 
 type Module struct{}
 
-func (m *Module) Get(w http.ResponseWriter, _ *bytes.Buffer, _ *http.Request, _ *shared.ConnInfo) {
-	w.WriteHeader(http.StatusMethodNotAllowed)
+func (m *Module) Get(conn *shared.ConnInfo) {
+	conn.Response.StatusCode = http.StatusMethodNotAllowed
 	return
 }
 
-func (m *Module) Post(w http.ResponseWriter, o *bytes.Buffer, r *http.Request, conn *shared.ConnInfo) {
+func (m *Module) Post(conn *shared.ConnInfo) {
 	var (
 		// POST values
-		username string = r.PostFormValue("username")
-		UUID     string = r.PostFormValue("sub")
-		password string = r.PostFormValue("password")
+		username string = conn.Request.PostFormValue("username")
+		UUID     string = conn.Request.PostFormValue("sub")
+		password string = conn.Request.PostFormValue("password")
 
 		// User data
 		userData     shared.UserInfo
@@ -58,7 +57,7 @@ func (m *Module) Post(w http.ResponseWriter, o *bytes.Buffer, r *http.Request, c
 	newVerifier = token.New(conn.Fingerprint, conn.Domain, strconv.FormatInt(conn.RequestTime, 10), shared.VERIFIER_KEY)
 
 	// Check the verifier and get the issued time
-	if msg := token.Get(conn.Fingerprint, conn.Domain, r.Header.Get("Verifier"), shared.VERIFIER_KEY); "" != msg {
+	if msg := token.Get(conn.Fingerprint, conn.Domain, conn.Request.Header.Get("Verifier"), shared.VERIFIER_KEY); "" != msg {
 		// Parse verifier message to issued time
 		if issuedTime, err := strconv.ParseInt(msg, 10, 64); err == nil {
 			// Check whether issued time valid and not expired
@@ -76,7 +75,7 @@ func (m *Module) Post(w http.ResponseWriter, o *bytes.Buffer, r *http.Request, c
 				err = shared.DB.QueryRow("SELECT id, password, displayName, mainLanguage FROM user WHERE "+SQLCond+" AND deleted = '0' LIMIT 1", SQLValue).Scan(&userData.UUID, &userPassword, &userData.Name, &userData.Language)
 				if err == sql.ErrNoRows {
 					// User/session did not exist
-					errMsg.StatusCode = http.StatusUnauthorized
+					conn.Response.StatusCode = http.StatusUnauthorized
 					errMsg.Message = "invalid_grant"
 				} else if err == nil {
 					// User exist, check password
@@ -97,7 +96,7 @@ func (m *Module) Post(w http.ResponseWriter, o *bytes.Buffer, r *http.Request, c
 						}
 					} else {
 						// Password incorrect
-						errMsg.StatusCode = http.StatusUnauthorized
+						conn.Response.StatusCode = http.StatusUnauthorized
 						errMsg.Message = "invalid_grant"
 						// log.Print(bcrypt.CompareHashAndPassword([]byte(userPassword), []byte(password)))
 					}
@@ -108,11 +107,11 @@ func (m *Module) Post(w http.ResponseWriter, o *bytes.Buffer, r *http.Request, c
 			} else {
 				// Issued time is either before server time or expired
 				if issuedTime > conn.RequestTime {
-					errMsg.StatusCode = 429 // Too Many Requests
+					conn.Response.StatusCode = http.StatusTooManyRequests
 					errMsg.Message = "invalid_request"
 					errMsg.Delay = issuedTime - conn.RequestTime
 				} else {
-					errMsg.StatusCode = http.StatusUnauthorized
+					conn.Response.StatusCode = http.StatusUnauthorized
 					errMsg.Message = "invalid_token"
 				}
 			}
@@ -121,27 +120,24 @@ func (m *Module) Post(w http.ResponseWriter, o *bytes.Buffer, r *http.Request, c
 		}
 	} else {
 		// Verifier error
-		errMsg.StatusCode = http.StatusUnauthorized
+		conn.Response.StatusCode = http.StatusUnauthorized
 		errMsg.Message = "invalid_token"
 	}
 
 	// Check whether there is error message
 	if "" != errMsg.Message {
-		// There is error
-		w.WriteHeader(errMsg.StatusCode)
-
 		errMsg.Verifier = newVerifier
 		if output, err = json.Marshal(errMsg); err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	o.Write(output)
+	conn.Response.Body.Write(output)
 	return
 }
 
-func (m *Module) Delete(w http.ResponseWriter, _ *bytes.Buffer, _ *http.Request, _ *shared.ConnInfo) {
-	w.WriteHeader(http.StatusMethodNotAllowed)
+func (m *Module) Delete(conn *shared.ConnInfo) {
+	conn.Response.StatusCode = http.StatusMethodNotAllowed
 	return
 }
 

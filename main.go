@@ -2,7 +2,6 @@
 package main
 
 import (
-	"bytes"
 	"io"
 	"log"
 	"net/http"
@@ -38,17 +37,18 @@ type HDXMux struct{}
 
 // HDX default router
 func (m *HDXMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var currentConn = shared.ConnInfo{
-		// Get the requested business domain to wildcard domain detection
-		Domain: strings.TrimSuffix(r.Host, DOMAIN_SUFFIX),
-
-		// Get the request time
-		RequestTime: time.Now().Unix(),
-	}
-
 	var (
-		// Output
-		output bytes.Buffer
+		// This store connection data to be shared between modules
+		currentConn = shared.ConnInfo{
+			// Get the requested business domain to wildcard domain detection
+			Domain: strings.TrimSuffix(r.Host, DOMAIN_SUFFIX),
+
+			// Attach the request
+			Request: r,
+
+			// Get the request time
+			RequestTime: time.Now().Unix(),
+		}
 
 		// Get the requested page
 		path string = strings.Trim(strings.TrimPrefix(r.RequestURI, PATH_PREFIX), "/")
@@ -59,11 +59,10 @@ func (m *HDXMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Error handler
 		err error
-	)
 
-	// Set headers to match JSON response and avoid being cached by browser
-	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
-	w.Header().Set("Cache-Control", "no-cache, no-store")
+		// Client fingerprint encripter
+		fingerprintCrypto = sha256.New()
+	)
 
 	// Check whether data exist in business data cache
 	var isBusinessDataCache bool = false
@@ -86,8 +85,8 @@ func (m *HDXMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// In case that the business is not registered
 		case err == sql.ErrNoRows:
 			// Return 403 invalid_client
-			w.WriteHeader(http.StatusNotFound)
-			return
+			currentConn.Response.StatusCode = http.StatusNotFound
+			goto response
 		// In case any other error
 		case err != nil:
 			log.Fatal(err)
@@ -96,14 +95,13 @@ func (m *HDXMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// In case that the business is not registered
 		if 0 == shared.BusinessData[currentConn.Domain].Id {
 			// Return 403 invalid_client
-			w.WriteHeader(http.StatusNotFound)
-			return
+			currentConn.Response.StatusCode = http.StatusNotFound
+			goto response
 		}
 	}
 
 	// Generate client fingerprint using IP address, user agent and domain
 	// The value is base64 encoded
-	fingerprintCrypto := sha256.New()
 	io.WriteString(fingerprintCrypto, r.Header.Get("RemoteAddr")+r.UserAgent()+currentConn.Domain)
 	currentConn.Fingerprint = base64.RawURLEncoding.EncodeToString(fingerprintCrypto.Sum(nil))
 
@@ -117,20 +115,20 @@ func (m *HDXMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// Decifrate the JSON message and check whether the token expired
 				if err = json.Unmarshal([]byte(raw), &tokenMsg); err != nil || currentConn.RequestTime > tokenMsg.Exp {
 					// Token expired, return 401 unauthorized
-					w.WriteHeader(http.StatusUnauthorized)
-					return
+					currentConn.Response.StatusCode = http.StatusUnauthorized
+					goto response
 				}
 
 				currentConn.UserInfo = &tokenMsg
 			} else {
 				// 'Authorization' header invalid, return 401 unauthorized
-				w.WriteHeader(http.StatusUnauthorized)
-				return
+				currentConn.Response.StatusCode = http.StatusUnauthorized
+				goto response
 			}
 		} else {
 			// 'Authorization' header invalid, return 401 unauthorized
-			w.WriteHeader(http.StatusUnauthorized)
-			return
+			currentConn.Response.StatusCode = http.StatusUnauthorized
+			goto response
 		}
 	}
 
@@ -143,23 +141,38 @@ func (m *HDXMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		switch r.Method {
 		case http.MethodGet:
-			modules.Get(page, w, &output, r, &currentConn)
+			modules.Get(page, &currentConn)
 		case http.MethodPost:
-			modules.Post(page, w, &output, r, &currentConn)
+			modules.Post(page, &currentConn)
 		case http.MethodDelete:
-			modules.Delete(page, w, &output, r, &currentConn)
+			modules.Delete(page, &currentConn)
 		default:
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
+			currentConn.Response.StatusCode = http.StatusMethodNotAllowed
+			goto response
 		}
 	} else {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		currentConn.Response.StatusCode = http.StatusNotFound
+		goto response
+	}
+
+response:
+	// Set headers to match JSON response and avoid being cached by browser
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	w.Header().Set("Cache-Control", "no-cache, no-store")
+
+	// Send status code
+	if 0 < currentConn.Response.StatusCode {
+		w.WriteHeader(currentConn.Response.StatusCode)
 	}
 
 	// 5 characters to avoid CSRF attack
-	io.WriteString(w, ")]}'\n")
-	output.WriteTo(w)
+	if http.StatusNoContent != currentConn.Response.StatusCode &&
+		http.StatusNotFound != currentConn.Response.StatusCode {
+		io.WriteString(w, ")]}'\n")
+		currentConn.Response.Body.WriteTo(w)
+	}
+
+	return
 }
 
 func main() {

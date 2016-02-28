@@ -1,7 +1,6 @@
 package init
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 
@@ -22,22 +21,22 @@ type Init struct {
 
 type Module struct{}
 
-func (m *Module) Get(w http.ResponseWriter, o *bytes.Buffer, r *http.Request, conn *shared.ConnInfo) {
+func (m *Module) Get(conn *shared.ConnInfo) {
 	init, _ := json.Marshal(Init{
 		conn.BusinessInfo.Country,
 		conn.BusinessInfo.Language,
 		conn.RequestTime,
 		token.New(conn.Fingerprint, conn.Domain, strconv.FormatInt(conn.RequestTime, 10), shared.VERIFIER_KEY)})
-	o.Write(init)
+	conn.Response.Body.Write(init)
 }
 
-func (m *Module) Post(w http.ResponseWriter, _ *bytes.Buffer, _ *http.Request, _ *shared.ConnInfo) {
-	w.WriteHeader(http.StatusMethodNotAllowed)
+func (m *Module) Post(conn *shared.ConnInfo) {
+	conn.Response.StatusCode = http.StatusMethodNotAllowed
 	return
 }
 
-func (m *Module) Delete(w http.ResponseWriter, _ *bytes.Buffer, _ *http.Request, _ *shared.ConnInfo) {
-	w.WriteHeader(http.StatusMethodNotAllowed)
+func (m *Module) Delete(conn *shared.ConnInfo) {
+	conn.Response.StatusCode = http.StatusMethodNotAllowed
 	return
 }
 
