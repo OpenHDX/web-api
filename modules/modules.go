@@ -6,6 +6,8 @@ import "github.com/OpenHDX/web-api/shared"
 type ModuleRequester interface {
 	Get(*shared.ConnInfo)
 	Post(*shared.ConnInfo)
+	Put(*shared.ConnInfo)
+	Patch(*shared.ConnInfo)
 	Delete(*shared.ConnInfo)
 }
 
@@ -33,6 +35,18 @@ func Get(module string, conn *shared.ConnInfo) {
 func Post(module string, conn *shared.ConnInfo) {
 	if IsExist(module) {
 		modules[module].Post(conn)
+	}
+}
+
+func Put(module string, conn *shared.ConnInfo) {
+	if IsExist(module) {
+		modules[module].Put(conn)
+	}
+}
+
+func Patch(module string, conn *shared.ConnInfo) {
+	if IsExist(module) {
+		modules[module].Patch(conn)
 	}
 }
 

@@ -144,6 +144,10 @@ func (m *HDXMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			modules.Get(page, &currentConn)
 		case http.MethodPost:
 			modules.Post(page, &currentConn)
+		case http.MethodPut:
+			modules.Put(page, &currentConn)
+		case http.MethodPatch:
+			modules.Patch(page, &currentConn)
 		case http.MethodDelete:
 			modules.Delete(page, &currentConn)
 		default:

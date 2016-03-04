@@ -35,6 +35,16 @@ func (m *Module) Post(conn *shared.ConnInfo) {
 	return
 }
 
+func (m *Module) Put(conn *shared.ConnInfo) {
+	conn.Response.StatusCode = http.StatusMethodNotAllowed
+	return
+}
+
+func (m *Module) Patch(conn *shared.ConnInfo) {
+	conn.Response.StatusCode = http.StatusMethodNotAllowed
+	return
+}
+
 func (m *Module) Delete(conn *shared.ConnInfo) {
 	conn.Response.StatusCode = http.StatusMethodNotAllowed
 	return
