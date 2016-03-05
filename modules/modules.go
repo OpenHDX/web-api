@@ -13,10 +13,18 @@ type ModuleRequester interface {
 
 var modules map[string]ModuleRequester
 
-func Add(name string, module ModuleRequester) {
+func init() {
+	modules = make(map[string]ModuleRequester)
+}
+
+// RegisterModule registers a HDX module to be called with HTTP methods. This 
+// is intended to be called from the init function in packages that implement 
+// the module.
+func RegisterModule(name string, module ModuleRequester) {
 	modules[name] = module
 }
 
+// IsExist check whether a module exist
 func IsExist(name string) bool {
 	for key := range modules {
 		if name == key {
@@ -54,8 +62,4 @@ func Delete(module string, conn *shared.ConnInfo) {
 	if IsExist(module) {
 		modules[module].Delete(conn)
 	}
-}
-
-func init() {
-	modules = make(map[string]ModuleRequester)
 }

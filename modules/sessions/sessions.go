@@ -16,6 +16,10 @@ import (
 	"github.com/OpenHDX/web-api/token"
 )
 
+func init() {
+	modules.RegisterModule("sessions", &Module{})
+}
+
 type AuthMsg struct {
 	Token    string `json:"accessToken"`
 	Verifier string `json:"verifier,omitempty"`
@@ -149,8 +153,4 @@ func (m *Module) Patch(conn *shared.ConnInfo) {
 func (m *Module) Delete(conn *shared.ConnInfo) {
 	conn.Response.StatusCode = http.StatusMethodNotAllowed
 	return
-}
-
-func init() {
-	modules.Add("sessions", &Module{})
 }
