@@ -210,9 +210,9 @@ func main() {
 	}
 
 	// Initialize web server
-	log.Print("Initializing web server...")
+	log.Print("Initializing web server on http://127.0.0.1:" + HTTP_PORT + " ...")
 	var mux = &HDXMux{}
-	err = http.ListenAndServe(":9090", mux)
+	err = http.ListenAndServe(":"+HTTP_PORT, mux)
 	if err != nil {
 		log.Fatal(err)
 	}
