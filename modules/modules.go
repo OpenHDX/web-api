@@ -26,10 +26,8 @@ func Register(name string, module Requester) {
 
 // IsExist check whether a module exist
 func IsExist(name string) bool {
-	for key := range modules {
-		if name == key {
-			return true
-		}
+	if _, dup := modules[name]; dup {
+		return true
 	}
 	return false
 }
