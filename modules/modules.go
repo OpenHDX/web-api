@@ -3,7 +3,7 @@ package modules
 
 import "github.com/OpenHDX/web-api/shared"
 
-type ModuleRequester interface {
+type Requester interface {
 	Get(*shared.ConnInfo)
 	Post(*shared.ConnInfo)
 	Put(*shared.ConnInfo)
@@ -11,16 +11,16 @@ type ModuleRequester interface {
 	Delete(*shared.ConnInfo)
 }
 
-var modules map[string]ModuleRequester
+var modules map[string]Requester
 
 func init() {
-	modules = make(map[string]ModuleRequester)
+	modules = make(map[string]Requester)
 }
 
-// RegisterModule registers a HDX module to be called with HTTP methods. This 
-// is intended to be called from the init function in packages that implement 
+// Register makes a HDX module available to be called with HTTP methods. This
+// is intended to be called from the init function in packages that implement
 // the module.
-func RegisterModule(name string, module ModuleRequester) {
+func Register(name string, module Requester) {
 	modules[name] = module
 }
 

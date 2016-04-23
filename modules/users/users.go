@@ -10,10 +10,6 @@ import (
 	"github.com/OpenHDX/web-api/shared"
 )
 
-func init() {
-	modules.RegisterModule("users", &Module{})
-}
-
 type Module struct{}
 
 func (m *Module) Get(conn *shared.ConnInfo) {
@@ -64,4 +60,8 @@ func (m *Module) Patch(conn *shared.ConnInfo) {
 func (m *Module) Delete(conn *shared.ConnInfo) {
 	conn.Response.StatusCode = http.StatusMethodNotAllowed
 	return
+}
+
+func init() {
+	modules.Register("users", &Module{})
 }
